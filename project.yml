@@ -1,0 +1,82 @@
+name: IPASaver
+options:
+  bundleIdPrefix: com.ipasaver
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+packages:
+  ArgumentParser:
+    url: https://github.com/apple/swift-argument-parser
+    from: "1.1.2"
+  ZIPFoundation:
+    url: https://github.com/weichsel/ZIPFoundation
+    from: "0.9.14"
+  KeychainAccess:
+    url: https://github.com/kishikawakatsumi/KeychainAccess
+    from: "4.0.2"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.1.0"
+    CURRENT_PROJECT_VERSION: "2"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+
+targets:
+  IPASaver:
+    type: application
+    platform: iOS
+    sources:
+      - path: IPASaver
+        excludes:
+          - "Support/Info.plist"
+    dependencies:
+      - target: Networking
+      - target: StoreAPI
+      - target: Persistence
+    settings:
+      base:
+        INFOPLIST_FILE: IPASaver/Support/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.ipasaver.app
+        PRODUCT_NAME: IPASaver
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_BITCODE: "NO"
+
+  Networking:
+    type: library.static
+    platform: iOS
+    sources:
+      - path: Vendored/Networking
+
+  StoreAPI:
+    type: library.static
+    platform: iOS
+    sources:
+      - path: Vendored/StoreAPI
+    dependencies:
+      - package: ArgumentParser
+      - package: ZIPFoundation
+      - target: Networking
+
+  Persistence:
+    type: library.static
+    platform: iOS
+    sources:
+      - path: Vendored/Persistence
+    dependencies:
+      - package: KeychainAccess
+
+schemes:
+  IPASaver:
+    build:
+      targets:
+        IPASaver: all
+    run:
+      config: Debug
+    archive:
+      config: Release
