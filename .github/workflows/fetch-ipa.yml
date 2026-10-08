@@ -90,15 +90,15 @@ jobs:
         run: |
           set -uo pipefail
           if [ -n "$AUTH_CODE" ]; then
-            "$RUNNER_TEMP/ipatool" auth login \
+            "$RUNNER_TEMP/ipatool" auth login --non-interactive \
               -e "$EMAIL" -p "$PASSWORD" --auth-code "$AUTH_CODE"
           else
-            "$RUNNER_TEMP/ipatool" auth login \
+            "$RUNNER_TEMP/ipatool" auth login --non-interactive \
               -e "$EMAIL" -p "$PASSWORD"
           fi
 
           if ! "$RUNNER_TEMP/ipatool" auth info; then
-            echo "::error::Sign-in failed. If your Apple ID uses two-factor authentication, provide a FRESH 6-digit code in the auth_code input and run again (codes expire after ~30 minutes). Also double-check the email/password."
+            echo "::error::Sign-in failed. If 2FA is enabled on the Apple ID: on your iPhone open Settings > [your name] > Sign-In & Security > Two-Factor Authentication > Get Verification Code, then re-run this workflow and paste that 6-digit code into the auth_code field (it stays valid for ~30 minutes). If you already supplied a code it may have expired — get a fresh one. Also double-check the email/password."
             exit 1
           fi
 
