@@ -9,6 +9,20 @@
 - حداقل نسخه: **iOS 16**
 - خروجی: IPA رمزگذاری‌شده با FairPlay (مثل ipatool/DLiPA)
 
+## 🚨 وضعیت فعلی (اکتبر ۲۰۲۶) — تغییر پروتکل اپل
+
+اپل در **اوت ۲۰۲۶** سرورهای لاگین App Store را به‌روزرسانی کرد و حالا درخواست‌های ورود باید با
+**SAP** (`X-Apple-ActionSignature`) امضا شوند. در نتیجه **همه‌ی ابزارهای ثالثی که پروتکل قدیمی را
+استفاده می‌کنند موقتاً از کار افتادند** — از جمله این اپ، Asspp و نسخه‌های قدیمی ipatool.
+
+- پیام خطا در این اپ: «Apple now requires SAP-signed requests…» (به‌جای ارور مبهم «The data couldn't be read»)
+- ✅ **راه‌حلِ فعال همین امروز**: ورک‌فلو **Fetch IPA** در همین ریپو — چون روی سرور گیتهاب
+  [ipatool رسمی v2.6+](https://github.com/majd/ipatool) را اجرا می‌کند که SAP را پشتیبانی می‌کند.
+  راهنمای پایین را ببینید.
+- ✅ راه‌حل دیگر: اجرای `ipatool` نسخه 2.6 به بالا روی یک کامپیوتر (Windows/Mac/Linux) و انتقال IPA به گوشی.
+- 🔜 به‌محض اینکه پیاده‌سازی SAP سازگار با iOS (مثل [ApplePackage](https://github.com/Lakr233/ApplePackage)
+  یا Asspp جدید) منتشر شود، به این اپ اضافه می‌شود — هر دو متن‌بازند.
+
 ## امکانات
 
 - ✅ **تب App Store**: جستجو با اسم، Bundle ID یا لینک اپ‌استور (`apps.apple.com/.../id…`)
@@ -35,7 +49,8 @@
 ```
 IPA-Saver/
 ├── project.yml                      # XcodeGen (4 تارگت: app + 3 کتابخانه)
-├── .github/workflows/build-ipa.yml  # کامپایل خودکار IPA (بدون مک)
+├── .github/workflows/build-ipa.yml  # کامپایل خودکار IPA خود اپ (بدون مک)
+├── .github/workflows/fetch-ipa.yml  # ✅ دانلود IPA هر اپ با ipatool رسمی (SAP-ready)
 ├── IPASaver/                        # سورس اپ (SwiftUI)
 │   ├── App/                         # IPASaverApp + Theme
 │   ├── Models/                      # DownloadItem, SavedFile
@@ -65,7 +80,26 @@ IPA-Saver/
 
 > اجرای مجدد: تب Actions → **Run workflow**.
 
-## روش ۲: کامپایل محلی با Xcode (روی مک)
+## روش ۲: گرفتن IPA هر اپ دلخواه — ورک‌فلو «Fetch IPA» ✅ فعال است
+
+این ورک‌فلو [ipatool رسمی](https://github.com/majd/ipatool) را روی سرور گیتهاب کامپایل و اجرا می‌کند
+(نسخه 2.6+ با پشتیبانی SAP) و IPA اپ موردنظر را به‌عنوان Artifact تحویل می‌دهد:
+
+1. **از نسخه 1.2.1 نیازی به ساخت Secret نیست** — اکانت Apple ID از قبل داخل
+   `fetch-ipa.yml` قرار گرفته (برای همین ریپو را **Private** نگه دارید).
+   اگر خواستید اکانت را عوض کنید، همان دو خط بالا در فایل را ویرایش کنید یا
+   Secretهای `APPLE_ID` / `APPLE_PASSWORD` بسازید که اولویت دارند.
+2. به تب **Actions** بروید → ورک‌فلو **Fetch IPA from App Store** → **Run workflow**:
+   - `app`: لینک اپ‌استور (مثل `https://apps.apple.com/us/app/x/id123456`) یا عدد ID یا Bundle ID
+   - `platform`: معمولاً `iphone`
+   - `auth_code`: اگر 2FA فعال است، **درست قبل از اجرا** کد ۶ رقمی را از دستگاه مورد اعتماد بگیرید و وارد کنید
+3. بعد از اتمام (۲ تا ۵ دقیقه) روی اجرا کلیک کنید → از **Artifacts** فایل `fetched-ipa` را بگیرید.
+4. IPA را به گوشی منتقل کنید → دیکریپت با GBox → ساین و نصب با eSign/GBox.
+
+> اگر Secret نسازید، می‌توانید ایمیل/رمز را در فیلدهای ورودی همان صفحه وارد کنید —
+> اما توجه: مقادیر Input در تاریخچه‌ی اجرا قابل مشاهده‌اند. اکانت دوم استفاده کنید.
+
+## روش ۳: کامپایل محلی با Xcode (روی مک)
 
 ```bash
 brew install xcodegen   # یک‌بار
@@ -106,6 +140,8 @@ zip -r IPASaver-unsigned.ipa Payload
 
 | خطا | راه‌حل |
 |---|---|
+| «Apple now requires SAP-signed requests…» | تغییر سروری اپل (اوت ۲۰۲۶) — از ورک‌فلو **Fetch IPA** یا ipatool 2.6+ روی کامپیوتر استفاده کنید |
+| «The data couldn't be read because it isn't in the correct format» | همان مورد بالا در نسخه‌های قدیمی‌تر اپ / Asspp قدیمی |
 | «Two-factor authentication is required» | کد ۶ رقمی دستگاه مورد اعتماد را وارد کنید و دوباره Sign in بزنید |
 | «storefront does not match» | کشور Storefront را با کشور اکانت اپل‌آیدی خود یکی کنید |
 | «Only free apps can be downloaded» | اپ پولی است — دانلود فقط برای اپ‌های رایگان |
