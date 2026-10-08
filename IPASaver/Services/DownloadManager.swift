@@ -102,7 +102,10 @@ final class DownloadManager: NSObject, ObservableObject {
     // MARK: - Internals (call with lock held)
 
     private func taskFor(_ item: DownloadItem) -> URLSessionDownloadTask? {
-        itemsByTask.first { $0.value === item }?.value
+        for (key, value) in itemsByTask where value === item {
+            return tasks[key]
+        }
+        return nil
     }
 
     private func removeItem(_ item: DownloadItem) {
