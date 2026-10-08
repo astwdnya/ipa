@@ -1,0 +1,128 @@
+name: Fetch IPA from App Store
+
+# Downloads a real .ipa from the App Store using the official ipatool (v2.6+,
+# which supports Apple's August 2026 SAP signing requirement) and uploads it
+# as a workflow artifact you can download and sign with eSign/GBox.
+#
+# CREDENTIALS: the Apple ID below is baked directly into this file so you do
+# NOT need to create repository secrets. This is only acceptable because the
+# repository is PRIVATE — never put credentials in a public repository.
+# The secrets APPLE_ID / APPLE_PASSWORD and the apple_id / password inputs
+# still override the baked-in values if you ever want to switch accounts.
+# Prefer a SECONDARY Apple ID — never your main one.
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "App Store link, numeric app ID, or bundle identifier"
+        required: true
+      platform:
+        description: "Platform: iphone / ipad / appletv / visionos / macos"
+        required: false
+        default: "iphone"
+      apple_id:
+        description: "Apple ID email (only if you did NOT add the APPLE_ID secret)"
+        required: false
+        default: ""
+      password:
+        description: "Apple ID password (only if you did NOT add the APPLE_PASSWORD secret)"
+        required: false
+        default: ""
+      auth_code:
+        description: "6-digit 2FA code — generate it right before running (expires in minutes)"
+        required: false
+        default: ""
+
+jobs:
+  fetch:
+    name: Fetch and package IPA
+    runs-on: macos-15
+
+    steps:
+      - name: Resolve credentials
+        id: creds
+        env:
+          SECRET_EMAIL: ${{ secrets.APPLE_ID }}
+          SECRET_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          INPUT_EMAIL: ${{ inputs.apple_id }}
+          INPUT_PASSWORD: ${{ inputs.password }}
+        run: |
+          set -euo pipefail
+          EMAIL="${SECRET_EMAIL:-${INPUT_EMAIL:-bzjcsgsin@gmail.com}}"
+          PASSWORD="${SECRET_PASSWORD:-${INPUT_PASSWORD:-Mamm_1386@}}"
+          echo "Using Apple ID: $EMAIL"
+          echo "has_email=true" >> "$GITHUB_OUTPUT"
+          echo "EMAIL=$EMAIL" >> "$GITHUB_ENV"
+          echo "PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Build ipatool (official, SAP-capable)
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/majd/ipatool.git "$RUNNER_TEMP/ipatool"
+          cd "$RUNNER_TEMP/ipatool"
+          go build -o "$RUNNER_TEMP/ipatool" .
+          "$RUNNER_TEMP/ipatool" --version
+
+      - name: Resolve app identifier
+        env:
+          APP_INPUT: ${{ inputs.app }}
+        run: |
+          set -euo pipefail
+          APP="$APP_INPUT"
+          if [[ "$APP" =~ id([0-9]+) ]]; then
+            echo "APP_ARGS=-i ${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
+          elif [[ "$APP" =~ ^[0-9]+$ ]]; then
+            echo "APP_ARGS=-i $APP" >> "$GITHUB_ENV"
+          else
+            # Treat anything else as a bundle identifier (e.g. com.apple.clips)
+            echo "APP_ARGS=-b $APP" >> "$GITHUB_ENV"
+          fi
+
+      - name: Sign in to the App Store
+        env:
+          AUTH_CODE: ${{ inputs.auth_code }}
+        run: |
+          set -uo pipefail
+          if [ -n "$AUTH_CODE" ]; then
+            "$RUNNER_TEMP/ipatool" auth login \
+              -e "$EMAIL" -p "$PASSWORD" --auth-code "$AUTH_CODE"
+          else
+            "$RUNNER_TEMP/ipatool" auth login \
+              -e "$EMAIL" -p "$PASSWORD"
+          fi
+
+          if ! "$RUNNER_TEMP/ipatool" auth info; then
+            echo "::error::Sign-in failed. If your Apple ID uses two-factor authentication, provide a FRESH 6-digit code in the auth_code input and run again (codes expire after ~30 minutes). Also double-check the email/password."
+            exit 1
+          fi
+
+      - name: Download the app
+        env:
+          PLATFORM: ${{ inputs.platform }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/ipatool" app download $APP_ARGS \
+            --purchase \
+            --platform "${PLATFORM:-iphone}" \
+            -o app.ipa
+          ls -lh app.ipa
+          mv app.ipa "$GITHUB_WORKSPACE/fetched-app.ipa"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fetched-ipa
+          path: fetched-app.ipa
+          if-no-files-found: error
+
+      - name: Cleanup session
+        if: always()
+        run: |
+          "$RUNNER_TEMP/ipatool" auth revoke || true
