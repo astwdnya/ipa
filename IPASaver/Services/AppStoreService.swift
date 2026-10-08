@@ -37,6 +37,7 @@ enum AppStoreServiceError: Error, LocalizedError {
     case paidApp
     case licenseFailed
     case countryMismatch
+    case appleProtocolChanged
     case network(String)
     case unknown(String)
 
@@ -64,6 +65,8 @@ enum AppStoreServiceError: Error, LocalizedError {
             return "Could not obtain a license for this app."
         case .countryMismatch:
             return "The selected storefront does not match the Apple ID region."
+        case .appleProtocolChanged:
+            return "Apple now requires SAP-signed requests for App Store sign-in (server change, August 2026). Third-party IPA downloaders — including this app and Asspp — are affected. Workaround: run the \"Fetch IPA\" GitHub Actions workflow in this repository, or ipatool v2.6+ on a computer. See README for details."
         case .network(let message):
             return "Network error: \(message)"
         case .unknown(let message):
@@ -93,7 +96,17 @@ enum AppStoreServiceError: Error, LocalizedError {
             }
         case let e as NSError where e.domain == NSURLErrorDomain:
             return .network(e.localizedDescription)
+        case is DecodingError:
+            // Apple returned something we could not decode — since Aug 2026 this is
+            // typically the SAP challenge / an HTML page instead of the legacy plist.
+            return .appleProtocolChanged
+        case let e as NSError where e.domain == NSCocoaErrorDomain && (e.code == 3840 || e.code == 3851):
+            return .appleProtocolChanged
         default:
+            if error.localizedDescription.contains("isn't in the correct format") ||
+                error.localizedDescription.contains("is not in the correct format") {
+                return .appleProtocolChanged
+            }
             return .unknown(error.localizedDescription)
         }
     }

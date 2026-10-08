@@ -200,6 +200,7 @@ struct AppStoreView: View {
                 .font(.headline)
             bullet("The downloaded .ipa is FairPlay-encrypted with your Apple ID — the same result as ipatool and DLiPA.")
             bullet("Free apps get a license automatically. Paid apps cannot be downloaded.")
+            bullet("Apple requires SAP-signed sign-in requests since August 2026. If sign-in fails, use the \"Fetch IPA\" GitHub Actions workflow in this repository — it runs the official ipatool and delivers the .ipa as an artifact.")
             bullet("Files are saved in “My Files”. To sideload, decrypt the IPA (e.g. with GBox) first, then sign it with eSign/GBox.")
             bullet("Use a secondary Apple ID — automated App Store access is not endorsed by Apple.")
         }
