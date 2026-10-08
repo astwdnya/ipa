@@ -37,6 +37,9 @@ targets:
       - target: Networking
       - target: StoreAPI
       - target: Persistence
+      - package: ArgumentParser
+      - package: ZIPFoundation
+      - package: KeychainAccess
     settings:
       base:
         INFOPLIST_FILE: IPASaver/Support/Info.plist
