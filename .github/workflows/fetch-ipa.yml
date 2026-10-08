@@ -64,8 +64,8 @@ jobs:
       - name: Build ipatool (official, SAP-capable)
         run: |
           set -euo pipefail
-          git clone --depth 1 https://github.com/majd/ipatool.git "$RUNNER_TEMP/ipatool"
-          cd "$RUNNER_TEMP/ipatool"
+          git clone --depth 1 https://github.com/majd/ipatool.git "$RUNNER_TEMP/ipatool-src"
+          cd "$RUNNER_TEMP/ipatool-src"
           go build -o "$RUNNER_TEMP/ipatool" .
           "$RUNNER_TEMP/ipatool" --version
 
