@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreAPI
 
 struct AppStoreView: View {
     @EnvironmentObject private var fileStore: FileStore
